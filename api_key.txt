@@ -1,2 +1,37 @@
-your_api_key
-your_base_url
+# AutoKaggle API Configuration
+# This file stores credentials for LLM providers (OpenAI, Anthropic)
+
+# ==============================================================================
+# OPENAI CONFIGURATION (Required)
+# ==============================================================================
+# Line 1: Your OpenAI API key (starts with sk-proj- or sk-)
+sk-your-openai-key-here
+
+# Line 2: OpenAI base URL (optional, defaults to https://api.openai.com/v1)
+https://api.openai.com/v1
+
+# ==============================================================================
+# ANTHROPIC CONFIGURATION (Optional)
+# ==============================================================================
+# Add your Anthropic API key if you want to use Claude models
+# Get your key from: https://www.anthropic.com/
+# Note: Line must contain "sk-ant-" to be recognized as Anthropic key
+sk-ant-your-anthropic-key-here
+
+# ==============================================================================
+# USAGE
+# ==============================================================================
+# Use with OpenAI (default):
+#   python framework.py --competition titanic --model gpt-4o
+#
+# Use with Anthropic:
+#   python framework.py --competition titanic --model claude-3-opus
+#
+# Cost-optimized (edit config.json agent_model_mapping to mix providers):
+#   - Reader: claude-3-haiku (fast, cheap)
+#   - Planner: claude-3-sonnet (balanced)
+#   - Developer: gpt-4o (best code generation)
+#   - Reviewer: claude-3-haiku (fast, cheap)
+#   - Summarizer: claude-3-haiku (fast, cheap)
+#
+# ==============================================================================
