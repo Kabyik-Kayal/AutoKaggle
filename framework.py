@@ -12,11 +12,34 @@ import sys
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run SOP for a competition.')
-    parser.add_argument('--competition', type=str, default='titanic', help='Competition name')
-    parser.add_argument('--model', type=str, default='gpt_4o', help='Model name')
+    parser.add_argument(
+        '--competition', 
+        type=str, 
+        default='titanic', 
+        help='Competition name'
+    )
+    parser.add_argument(
+        '--model', 
+        type=str, 
+        default='gpt-4o', 
+        help='LLM model to use (e.g., gpt-4o, claude-3-opus). '
+             'Supports both OpenAI and Anthropic models.'
+    )
+    parser.add_argument(
+        '--provider',
+        type=str,
+        choices=['auto', 'openai', 'anthropic'],
+        default='auto',
+        help='LLM provider (auto=detect from model name, may be removed in future)'
+    )
+    
     args = parser.parse_args()
     competition = args.competition
     model = args.model
+    
+    # Log provider selection (informational)
+    if args.provider != 'auto':
+        logging.info(f"Provider override: {args.provider}")
 
     sop = SOP(competition, model)
     start_state = State(phase="Understand Background", competition=competition)

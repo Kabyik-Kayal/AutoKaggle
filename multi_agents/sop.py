@@ -24,20 +24,41 @@ class SOP:
         return {
             'max_iterations': 3,
             'phases': config['phases'],
-            'phase_to_iterations': config['phase_to_iterations']
+            'phase_to_iterations': config['phase_to_iterations'],
+            'agent_model_mapping': config.get('agent_model_mapping', {}),
         }
 
     def _create_agent(self, agent_name: str):
+        """
+        Create agent with model from configuration or defaults.
+        
+        Supports both OpenAI and Anthropic models based on config.
+        """
+        # Get model mapping from config, with sensible defaults
+        agent_model_mapping = self.config.get('agent_model_mapping', {})
+        
+        default_models = {
+            "Reader": "gpt-4o-mini",
+            "Planner": self.model,  # Use command-line model for planning
+            "Developer": "gpt-4o",
+            "Reviewer": "gpt-4o-mini",
+            "Summarizer": "gpt-4o-mini",
+        }
+        
+        model = agent_model_mapping.get(agent_name, default_models.get(agent_name, "gpt-4o-mini"))
+        
+        logging.info(f"Creating {agent_name} agent with model: {model}")
+        
         if agent_name == "Reader":
-            agent = Reader('gpt-4o-mini', 'api')
+            agent = Reader(model, 'api')
         elif agent_name == "Planner":
-            agent = Planner(self.model, 'api')
+            agent = Planner(model, 'api')
         elif agent_name == "Developer":
-            agent = Developer('gpt-4o', 'api')
+            agent = Developer(model, 'api')
         elif agent_name == "Reviewer":
-            agent = Reviewer('gpt-4o-mini', 'api')
+            agent = Reviewer(model, 'api')
         elif agent_name == "Summarizer":
-            agent = Summarizer('gpt-4o-mini', 'api')
+            agent = Summarizer(model, 'api')
         else:
             return None
         return agent

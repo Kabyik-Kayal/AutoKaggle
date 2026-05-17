@@ -5,12 +5,15 @@ import subprocess
 import re
 import shutil
 import json
+import logging
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 PREFIX_STRONG_BASELINE = f'{DIR}/strong_baseline/competition'
 PREFIX_WEAK_BASELINE = f'{DIR}/weak_baseline/competition'
 PREFIX_MULTI_AGENTS = f'{DIR}/multi_agents'
 SEPERATOR_TEMPLATE = '-----------------------------------{step_name}-----------------------------------'
+
+logger = logging.getLogger(__name__)
 
 def load_config(file_path: str):
     assert file_path.endswith('json'), "The configuration file should be in JSON format."
@@ -32,6 +35,9 @@ def read_file(file_path: str):
 def multi_chat(api_handler: APIHandler, prompt, history=None, max_completion_tokens=4096):
     """
     Multi-round chat with the assistant.
+    
+    Backward compatibility wrapper - uses APIHandler if provided.
+    For new code, use the LLM class directly with provider abstraction.
     """
     if history is None:
         history = []
@@ -45,28 +51,55 @@ def multi_chat(api_handler: APIHandler, prompt, history=None, max_completion_tok
     
     return reply, history
 
-def read_image(prompt, image_path):
+def read_image(prompt, image_path, model: str = 'gpt-4o'):
     """
-    Read the image and return the response.
+    Read and analyze image with specified model.
+    
+    Args:
+        prompt: Text prompt about the image
+        image_path: Path to image file
+        model: Model to use for analysis (defaults to gpt-4o)
+        
+    Returns:
+        Analysis/description of the image
     """
-    # encode the image
     def encode_image(image_path):
+        """Encode image to base64"""
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode('utf-8')
     
-    # Getting the base64 string
+    # Encode image
     base64_image = encode_image(image_path)
-    api_handler = APIHandler('gpt-4o')
-    messages=[
-        {"role": "system", "content": "You are a professional data analyst."},
-        {
-            "role": "user", 
-            "content": [
-                {"type": "text", "text": f"{prompt}"},
-                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
-            ]
-        }
-    ]
-    settings = APISettings(max_completion_tokens=4096)
-    reply = api_handler.get_output(messages=messages, settings=settings, response_type='image')
-    return reply
+    
+    # Determine image type from file extension
+    image_type = 'image/png'
+    if image_path.lower().endswith(('.jpg', '.jpeg')):
+        image_type = 'image/jpeg'
+    elif image_path.lower().endswith('.gif'):
+        image_type = 'image/gif'
+    elif image_path.lower().endswith('.webp'):
+        image_type = 'image/webp'
+    
+    # Get provider and process image
+    try:
+        from multi_agents.providers import ProviderFactory
+        provider = ProviderFactory.get_llm_provider(model)
+        reply = provider.process_image(prompt, base64_image, image_type)
+        return reply
+    except Exception as e:
+        logger.error(f"Image processing failed with {model}: {e}")
+        # Fallback to APIHandler for backward compatibility
+        api_handler = APIHandler(model)
+        messages = [
+            {"role": "system", "content": "You are a professional data analyst."},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{image_type};base64,{base64_image}"}}
+                ]
+            }
+        ]
+        settings = APISettings(max_completion_tokens=4096)
+        reply = api_handler.get_output(messages=messages, settings=settings, response_type='image')
+        return reply

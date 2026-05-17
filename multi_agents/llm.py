@@ -1,51 +1,116 @@
+"""
+Language Model abstraction layer supporting multiple providers.
+Provides unified interface for LLM generation and embeddings.
+"""
+
 import os
 import sys
+import logging
 
 sys.path.append('..')
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from typing import List, Tuple
-from api_handler import APIHandler
-from utils import multi_chat
-from openai import OpenAI
-import tiktoken
+
+from .providers import ProviderFactory, ProviderSettings
+
+logger = logging.getLogger(__name__)
+
 
 class LLM:
-    def __init__(self, model: str, type: str):
-        if type == 'api':
-            self.api_handler = APIHandler(model)
-        elif type == 'local':
-            pass
-
-    def generate(self, prompt: str, history: list, max_completion_tokens=4096) -> Tuple[str, list]:
-        return multi_chat(self.api_handler, prompt, history, max_completion_tokens)
+    """
+    Language Model abstraction using provider pattern.
+    Supports multiple providers (OpenAI, Anthropic, etc.)
+    """
     
-class OpenaiEmbeddings:
-    def __init__(self, api_key: str, base_url: str = None, model: str = 'text-embedding-3-large'):
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
-        self.model = model
-
+    def __init__(self, model: str, type: str = 'api'):
+        """
+        Initialize LLM with specified model.
         
-    def num_tokens_from_string(string: str, encoding_name: str = 'cl100k_base') -> int:
-        '''
-        Returns the number of tokens in a text string.
-        '''
-        encoding = tiktoken.get_encoding(encoding_name)
-        num_tokens = len(encoding.encode(string))
-
-        return num_tokens
-        
-    def encode(self, input: str):
-        try:
-            response = self.client.embeddings.create(
-                model=self.model, input=input, encoding_format='float'
-            )
-        except:
-            len_embeddings = self.num_tokens_from_string(input)
-            # if one of the inputs exceed the limit, raise error
-            if len_embeddings > 8191:
-                raise Exception(f'Input exceeds the limit of <{self.model}>!')
-            else:
-                raise Exception('Embeddings generation failed!')
+        Args:
+            model: Model name (e.g., 'gpt-4o', 'claude-3-opus')
+            type: 'api' for API-based (only option currently)
             
-        return response.data
+        Raises:
+            ValueError: If type is not 'api' or model not recognized
+        """
+        if type == 'api':
+            self.provider = ProviderFactory.get_llm_provider(model)
+            self.model = model
+        elif type == 'local':
+            raise NotImplementedError("Local models not yet supported")
+        else:
+            raise ValueError(f"Unknown LLM type: {type}")
+        
+        logger.info(f'LLM initialized with model: {model}')
+    
+    def generate(self, prompt: str, history: list = None, 
+                max_completion_tokens: int = 4096) -> Tuple[str, list]:
+        """
+        Generate response using the provider.
+        
+        Args:
+            prompt: User prompt
+            history: Conversation history (list of message dicts)
+            max_completion_tokens: Maximum tokens in response
+            
+        Returns:
+            Tuple of (response_text, updated_history)
+        """
+        if history is None:
+            history = []
+        
+        # Build message list
+        messages = history + [{'role': 'user', 'content': prompt}]
+        
+        # Create settings
+        settings = ProviderSettings(max_tokens=max_completion_tokens)
+        
+        # Generate using provider
+        reply = self.provider.generate(messages, settings)
+        
+        # Update history
+        history.append({'role': 'user', 'content': prompt})
+        history.append({'role': 'assistant', 'content': reply})
+        
+        return reply, history
+
+
+class Embeddings:
+    """
+    Embeddings abstraction (currently OpenAI only).
+    ChromaDB uses this for semantic search.
+    """
+    
+    def __init__(self):
+        """Initialize embeddings provider"""
+        self.provider = ProviderFactory.get_embedding_provider()
+        logger.info(f'Embeddings provider initialized: {self.provider.model}')
+    
+    def encode(self, text: str) -> List[float]:
+        """
+        Generate embedding for text.
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            Embedding vector as list of floats
+        """
+        return self.provider.encode(text)
+    
+    def num_tokens(self, text: str) -> int:
+        """
+        Count tokens in text.
+        
+        Args:
+            text: Text to count tokens for
+            
+        Returns:
+            Number of tokens
+        """
+        return self.provider.num_tokens(text)
+
+
+# Backward compatibility alias
+OpenaiEmbeddings = Embeddings
