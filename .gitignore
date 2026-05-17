@@ -1,0 +1,97 @@
+# Credentials & Secrets
+api_key.txt
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+env.bak/
+venv.bak/
+
+# Conda
+conda-env/
+.conda/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter & Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+.jupyter/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Logs
+*.log
+logs/
+
+# Competition Data (user-provided)
+multi_agents/competition/
+
+# Generated Outputs
+experiments_history/
+*.csv
+submission*.csv
+
+# IDE temp files
+*.bak
+*.tmp
+.swp
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Project-specific
+*.pkl
+*.pickle
+*.joblib
+.cache/
+temp/
+tmp/
+
+Architecture.md
